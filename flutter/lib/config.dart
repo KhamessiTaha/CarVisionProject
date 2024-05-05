@@ -1,0 +1,13 @@
+//final url= 'https://a0e9-102-159-166-25.ngrok-free.app/';
+final url= 'http://192.168.1.29:3000/';
+final registration  = url + "register";
+final login  = url + "login";
+final update  = url + "update/";
+final getuser = url + "getuserbyid/";
+final getusers = url + "getallusers";
+final deleteuser = url + "deleteuserbyid/";
+final carsave= url + "car/savecar";
+final getcar= url + "car/getcarsbyuser/";
+final getallcars= url + "car/getallcars";
+final getcarimage= url + "car/";
+final deletecar= url + "car/deletecar/";
