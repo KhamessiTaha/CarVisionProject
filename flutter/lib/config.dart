@@ -1,4 +1,4 @@
-//final url= 'https://a0e9-102-159-166-25.ngrok-free.app/';
+//final url= 'https://d220-41-62-97-116.ngrok-free.app/';
 final url= 'http://192.168.1.29:3000/';
 final registration  = url + "register";
 final login  = url + "login";

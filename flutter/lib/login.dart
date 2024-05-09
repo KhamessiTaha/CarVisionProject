@@ -42,7 +42,6 @@ class _LoginPageState extends State<LoginPage> {
     if (emailController.text.isEmpty || passwordController.text.isEmpty) {
       setState(() {
         _isNotValidate = true;
-
       });
       return;
     }
@@ -66,35 +65,38 @@ class _LoginPageState extends State<LoginPage> {
       print("Response status code: ${response.statusCode}");
       print("Response body: ${response.body}");
 
-      var jsonResponse = jsonDecode(response.body);
-      print("jsonResponse");
-      if (jsonResponse['status']) {
-        var myToken = jsonResponse['token'];
-        prefs!.setString('token', myToken);
+      if (response.statusCode == 200) {
+        var jsonResponse = jsonDecode(response.body);
+        print("jsonResponse");
+        if (jsonResponse['status']) {
+          var myToken = jsonResponse['token'];
+          prefs!.setString('token', myToken);
 
-        // Decode token payload
-        List<String> tokenParts = myToken.split('.');
-        String decodedPayload = utf8.decode(base64Url.decode(base64Url.normalize(tokenParts[1])));
-        Map<String, dynamic> decodedToken = jsonDecode(decodedPayload);
+          // Decode token payload
+          List<String> tokenParts = myToken.split('.');
+          String decodedPayload = utf8.decode(base64Url.decode(base64Url.normalize(tokenParts[1])));
+          Map<String, dynamic> decodedToken = jsonDecode(decodedPayload);
 
-        if (decodedToken['isAdmin']) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => AdminPage(token: myToken, currentIndex: 0, onTap: (index) {})),
-          );
+          if (decodedToken['isAdmin']) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => AdminPage(token: myToken, currentIndex: 0, onTap: (index) {})),
+            );
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => ThePage(token: myToken, currentIndex: 0, onTap: (index) {})),
+            );
+          }
         } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => ThePage(token: myToken, currentIndex: 0, onTap: (index) {})),
-          );
+          setState(() {
+            _errorMessage = "Login error, check your inputs"; // Display generic login error message
+          });
         }
       } else {
         setState(() {
-          _errorMessage = jsonResponse['message'];
-          print(_errorMessage);
-
+          _errorMessage = "Login error, check your inputs"; // Display generic login error message
         });
-
       }
     } else {
       print('SharedPreferences initialization failed.');
@@ -106,109 +108,112 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      backgroundColor: Colors.black,
+      backgroundColor: Color.fromRGBO(30, 30, 30, 1),
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.black,
+        backgroundColor: Color.fromRGBO(30, 30, 30, 1),
         leading: IconButton(
           onPressed: () {
             Navigator.pop(context);
           },
-          icon: const Icon(Icons.arrow_back_ios, size: 20, color: Colors.black),
+          icon: const Icon(Icons.arrow_back_ios, size: 20, color: Color.fromRGBO(30, 30, 30, 1)),
         ),
       ),
-      body: SizedBox(
-        height: MediaQuery.of(context).size.height,
-        width: double.infinity,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: <Widget>[
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: <Widget>[
-                  const Column(
+      body: Center( // Center widget added
+        child: Padding( // Padding added
+          padding: const EdgeInsets.only(top: 100), // Adjust padding as needed
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height,
+            width: double.infinity,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: <Widget>[
-                      Text("Login", style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Colors.white)),
-                      SizedBox(height: 20),
-                      Text("Login to your account", style: TextStyle(fontSize: 15, color: Colors.white)),
-                    ],
-                  ),
-                  Column(
-                    children: <Widget>[
+                      const Column(
+                        children: <Widget>[
+                          Text("Login", style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Colors.white)),
+                          SizedBox(height: 20),
+                          Text("Login to your account", style: TextStyle(fontSize: 15, color: Colors.white)),
+                        ],
+                      ),
+                      Column(
+                        children: <Widget>[
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 40),
+                            child: inputFile(label: "Email", controller: emailController, errorMessage: _isNotValidate && emailController.text.isEmpty ? "Email cannot be empty" : null),
+                          ),
+                          Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 40),
+                              child: inputFile(label: "Password", obscureText: true, controller: passwordController, errorMessage: _isNotValidate && passwordController.text.isEmpty ? "Password cannot be empty" : null)
+                          )
+                        ],
+                      ),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 40),
-                        child: inputFile(label: "Email", controller: emailController, errorMessage: _isNotValidate && emailController.text.isEmpty ? "Email cannot be empty" : null),
+                        child: Container(
+                          padding: const EdgeInsets.only(top: 3, left: 3),
+                          decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(50),
+                              border: const Border(
+                                bottom: BorderSide(color: Color.fromRGBO(30, 30, 30, 1)),
+                                top: BorderSide(color: Color.fromRGBO(30, 30, 30, 1)),
+                                left: BorderSide(color: Color.fromRGBO(30, 30, 30, 1)),
+                                right: BorderSide(color: Color.fromRGBO(30, 30, 30, 1)),
+                              )),
+                          child: MaterialButton(
+                            minWidth: double.infinity,
+                            height: 60,
+                            onPressed: loginUser,
+                            color: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                            child: const Text(
+                              "Login",
+                              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18, color: Color.fromRGBO(30, 30, 30, 1)),
+                            ),
+                          ),
+                        ),
                       ),
                       Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 40),
-                          child: inputFile(label: "Password", obscureText: true, controller: passwordController, errorMessage: _isNotValidate && passwordController.text.isEmpty ? "Password cannot be empty" : null)
-                      )
-                    ],
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 40),
-                    child: Container(
-                      padding: const EdgeInsets.only(top: 3, left: 3),
-                      decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(50),
-                          border: const Border(
-                            bottom: BorderSide(color: Colors.black),
-                            top: BorderSide(color: Colors.black),
-                            left: BorderSide(color: Colors.black),
-                            right: BorderSide(color: Colors.black),
-                          )),
-                      child: MaterialButton(
-                        minWidth: double.infinity,
-                        height: 60,
-                        onPressed: loginUser,
-                        color: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
-                        child: const Text(
-                          "Login",
-                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18, color: Colors.black),
+                        padding: const EdgeInsets.symmetric(horizontal: 40),
+                        child: Text(
+                          _errorMessage ?? '', // Display error message if available, otherwise display an empty string
+                          style: TextStyle(color: Colors.red),
                         ),
                       ),
-                    ),
-                  ),
-                  if (_errorMessage != null)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 40),
-                      child: Text(
-                        _errorMessage!,
-                        style: TextStyle(color: Colors.red),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          const Text(
+                            "Don't have an account?",
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              // Navigate to the signup page here
+                              Navigator.push(
+                                  context, MaterialPageRoute(builder: (context) => const SignupPage()));
+                            },
+                            child: const Text(
+                              " Sign up",
+                              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18, color: Colors.red),
+                            ),
+                          )
+                        ],
                       ),
-                    ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      const Text(
-                        "Don't have an account?",
-                        style: TextStyle(color: Colors.white),
+                      Container(
+                        height: 200,
+                        decoration: const BoxDecoration(),
                       ),
-                      GestureDetector(
-                        onTap: () {
-                          // Navigate to the signup page here
-                          Navigator.push(
-                              context, MaterialPageRoute(builder: (context) => const SignupPage()));
-                        },
-                        child: const Text(
-                          " Sign up",
-                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18, color: Colors.red),
-                        ),
-                      )
                     ],
                   ),
-                  Container(
-                    padding: const EdgeInsets.only(top: 100),
-                    height: 200,
-                    decoration: const BoxDecoration(),
-                  ),
-                ],
-              ),
-            )
-          ],
+                )
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -228,7 +233,7 @@ Widget inputFile({label, obscureText = false, required TextEditingController con
       TextField(
         controller: controller,
         obscureText: obscureText,
-        style: const TextStyle(color: Colors.black), // Set text color to white
+        style: const TextStyle(color: Color.fromRGBO(30, 30, 30, 1)), // Set text color to white
         decoration: InputDecoration(
           filled: true,
           fillColor: Colors.white,

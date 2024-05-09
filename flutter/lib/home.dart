@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -14,7 +15,9 @@ import 'package:dash_chat_2/dash_chat_2.dart';
 import 'consts.dart';
 import 'login.dart';
 import 'main.dart';
-
+import 'package:flutter_tflite/flutter_tflite.dart';
+import 'dart:developer' as devtools;
+import 'package:image/image.dart' as img;
 class ThePage extends StatefulWidget {
   final token;
   final int currentIndex;
@@ -38,7 +41,8 @@ class _ThePageState extends State<ThePage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white, // Background color of the app bar
-        elevation: 0, // To remove the shadow below the app bar
+        elevation: 0,
+        automaticallyImplyLeading: false,// To remove the shadow below the app bar
         actions: [
           IconButton(
             icon: Icon(
@@ -46,6 +50,7 @@ class _ThePageState extends State<ThePage> {
               color: Colors.grey, // Color of the logout icon
             ),
             onPressed: () {
+              Tflite.close();
               // Add logout functionality here
               _logout(context); // Call the logout function
             },
@@ -93,8 +98,8 @@ class _ThePageState extends State<ThePage> {
     await prefs.remove('auth_token');
 
     Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => HomePage()),);
+      context,
+      MaterialPageRoute(builder: (context) => HomePage()),);
   }
 
 
@@ -218,19 +223,63 @@ class _ThePageState extends State<ThePage> {
   }
 }
 
-
-
-class UploadWidget extends StatelessWidget {
+class UploadWidget extends StatefulWidget {
   final String token;
 
   const UploadWidget({Key? key, required this.token}) : super(key: key);
+
+  @override
+  _UploadWidgetState createState() => _UploadWidgetState();
+}
+
+class _UploadWidgetState extends State<UploadWidget> {
+  late Future<Map<String, dynamic>> _userInfoFuture;
+  late List<String> classes;
+  String? imagePath;
+  String? recognitionResult;
+  String make="";
+  String model="";
+  String year="";
+
+
+  @override
+  void initState() {
+    super.initState();
+    _tfLteInit();
+    _loadClasses();
+    _userInfoFuture = _getUserInfo();
+  }
+
+
+
+
+  Future<void> _tfLteInit() async {
+    String? res = await Tflite.loadModel(
+      model: "assets/model.tflite",
+      labels: "assets/Classes.txt",
+      numThreads: 1,
+      isAsset: true,
+      useGpuDelegate: false,
+    );
+  }
+
+  Future<void> _loadClasses() async {
+    String data = await rootBundle.loadString('assets/Classes.txt');
+    setState(() {
+      classes = LineSplitter().convert(data);
+    });
+  }
+
+
+
+
   Future<Map<String, dynamic>> _getUserInfo() async {
     try {
       String userId = await _getUserIdFromToken();
       var response = await http.get(
         Uri.parse('$getuser$userId'),
         headers: {
-          "Authorization": "Bearer $token",
+          "Authorization": "Bearer ${widget.token}",
         },
       );
       var jsonResponse = jsonDecode(response.body);
@@ -243,64 +292,85 @@ class UploadWidget extends StatelessWidget {
   }
 
   Future<String> _getUserIdFromToken() async {
-    Map<String, dynamic> jwtDecodedToken = JwtDecoder.decode(token);
+    Map<String, dynamic> jwtDecodedToken = JwtDecoder.decode(widget.token);
     return jwtDecodedToken['_id'];
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<Map<String, dynamic>>(
-      future: _getUserInfo(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.red), // Change the color to red
-            ),
-          );
-        } else if (snapshot.hasError) {
-          return Center(
-            child: Text('Error: ${snapshot.error}'),
-          );
-        }
-        else {
-          String userId = snapshot.data?['user']['_id'] ?? ''; // Provide a default value if _id is null
-          if (userId.isEmpty) {
-            return Text('User ID not available'); // Handle the case where user ID is empty or null
-          }
-          return Center(
-            child: ElevatedButton(
-              onPressed: () => _pickImageFromGallery(userId),
-              style: ElevatedButton.styleFrom(
-                primary: Colors.red, // Background color
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20.0), // Rounded corners
-                ),
-              ),
-              child: Text('Upload Picture of Car from Gallery'),
-            ),
-          );
-        }
-      },
-    );
-  }
-
-
-  Future<void> _pickImageFromGallery(String userId) async {
+  Future<void> _pickImageFromgallery(String userId) async {
     final pickedImage = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedImage == null) return;
 
     File selectedImage = File(pickedImage.path);
 
-    // Perform image upload with user ID
-    await _uploadImage(selectedImage, userId);
+    // Resize image to 300x300
+    File resizedImage = await _resizeImage(selectedImage);
+
+    // Run TensorFlow Lite model on the resized image
+    var recognitions = await Tflite.runModelOnImage(
+      path: resizedImage.path,
+      imageMean: 0.0,
+      imageStd: 255.0,
+      numResults: 2,
+      threshold: 0.2,
+      asynch: true,
+    );
+    if (recognitions == null || recognitions.isEmpty) {
+      devtools.log("Recognition result is empty");
+      return;
+    }
+
+    // Split recognition result
+    List<String> parts = recognitions[0]['label'].toString().split('_');
+    setState(() {
+      imagePath = resizedImage.path;
+      recognitionResult = recognitions[0]['label'].toString();
+      make = parts[0];
+      model = parts[1];
+      year = parts[2];
+    });
+    devtools.log(recognitions[0]['label'].toString());
+
+
+
+    // Ensure recognition result is available before uploading
+    if (recognitionResult != null && make != null && model != null && year != null) {
+      await _uploadImage(userId, make, model, year, selectedImage);
+    } else {
+      print("Recognition result or make/model/year is missing");
+    }
   }
 
-  Future<void> _uploadImage(File image, String userId) async {
+
+
+  Future<File> _resizeImage(File imageFile) async {
+    // Read the image from file
+    List<int> imageBytes = await imageFile.readAsBytes();
+    img.Image? image = img.decodeImage(imageBytes);
+
+    if (image == null) {
+      throw Exception('Failed to decode image.');
+    }
+
+    // Resize the image to 300x300
+    img.Image resizedImage = img.copyResize(image, width: 300, height: 300);
+
+    // Write the resized image to a new file
+    File resizedFile = File(imageFile.path.replaceAll(RegExp(r'\.[^\.]+$'), '_resized.jpg'));
+    await resizedFile.writeAsBytes(img.encodeJpg(resizedImage));
+
+    return resizedFile;
+  }
+
+  Future<void> _uploadImage(String userId,String Make,String model,String year,File image) async {
     try {
       var request = http.MultipartRequest('POST', Uri.parse(carsave));
+
+      request.fields['userId'] = userId;
+      request.fields['Make'] = Make;
+      request.fields['model'] = model;
+      request.fields['year'] = year;
       request.files.add(await http.MultipartFile.fromPath('image', image.path));
-      request.fields['userId'] = userId; // Pass user ID as a field
+       // Pass user ID as a field
       var response = await request.send();
       if (response.statusCode == 200) {
         print('Image uploaded successfully');
@@ -311,19 +381,129 @@ class UploadWidget extends StatelessWidget {
       print('Error uploading image: $e');
     }
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _userInfoFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.red), // Change the color to red
+            ),
+          );
+        } else if (snapshot.hasError) {
+          return Center(
+            child: Text('Error: ${snapshot.error}'),
+          );
+        } else {
+          String userId = snapshot.data?['user']['_id'] ?? ''; // Provide a default value if _id is null
+          if (userId.isEmpty) {
+            return Text('User ID not available'); // Handle the case where user ID is empty or null
+          }
+          return Center( // Wrap your Column with Center widget
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                imagePath != null
+                    ? Image.file(File(imagePath!))
+                    : Container(),
+                recognitionResult != null
+                    ? Column(
+                  children: [
+
+                    SizedBox(height: 10),
+                    make != null ? Text("Make: $make") : Container(),
+                    model != null ? Text("Model: $model") : Container(),
+                    year != null ? Text("Year: $year") : Container(),
+                  ],
+                )
+                    : Container(),
+                ElevatedButton(
+                  onPressed: () async { // Make the onPressed callback asynchronous
+                    await _pickImageFromgallery(userId); // Wait for image picking and recognition
+                    // Image has been picked and recognition is complete, now you can upload the image
+                  },
+                  style: ButtonStyle(
+                    backgroundColor: MaterialStateProperty.all<Color>(Colors.red),
+                    // Change button color to red
+                  ),
+                  child: Text(
+                    'Upload Picture of Car',
+                    style: TextStyle(color: Colors.white), // Change text color to white
+                  ),
+                ),
+
+              ],
+            ),
+          );
+        }
+      },
+    );
+  }
 }
 
-class CameraWidget extends StatelessWidget {
+
+class CameraWidget extends StatefulWidget {
   final String token;
 
   const CameraWidget({Key? key, required this.token}) : super(key: key);
+
+  @override
+  _CameraWidgetState createState() => _CameraWidgetState();
+}
+
+class _CameraWidgetState extends State<CameraWidget> {
+  late Future<Map<String, dynamic>> _userInfoFuture;
+  late List<String> classes;
+  String? imagePath;
+  String? recognitionResult;
+  String make="";
+  String model="";
+  String year="";
+
+
+  @override
+  void initState() {
+    super.initState();
+    _tfLteInit();
+    _loadClasses();
+    _userInfoFuture = _getUserInfo();
+  }
+
+
+
+
+
+  Future<void> _tfLteInit() async {
+    String? res = await Tflite.loadModel(
+      model: "assets/model.tflite",
+      labels: "assets/Classes.txt",
+      numThreads: 1,
+      isAsset: true,
+      useGpuDelegate: false,
+    );
+  }
+
+  Future<void> _loadClasses() async {
+    String data = await rootBundle.loadString('assets/Classes.txt');
+    setState(() {
+      classes = LineSplitter().convert(data);
+    });
+  }
+
+
+
+
+
   Future<Map<String, dynamic>> _getUserInfo() async {
     try {
       String userId = await _getUserIdFromToken();
       var response = await http.get(
         Uri.parse('$getuser$userId'),
         headers: {
-          "Authorization": "Bearer $token",
+          "Authorization": "Bearer ${widget.token}",
         },
       );
       var jsonResponse = jsonDecode(response.body);
@@ -336,71 +516,91 @@ class CameraWidget extends StatelessWidget {
   }
 
   Future<String> _getUserIdFromToken() async {
-    Map<String, dynamic> jwtDecodedToken = JwtDecoder.decode(token);
+    Map<String, dynamic> jwtDecodedToken = JwtDecoder.decode(widget.token);
     return jwtDecodedToken['_id'];
   }
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<Map<String, dynamic>>(
-      future: _getUserInfo(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.red), // Change the color to red
-            ),
-          );
-        } else if (snapshot.hasError) {
-          return Center(
-            child: Text('Error: ${snapshot.error}'),
-          );
-        }
-        else {
-          print('Snapshot data: ${snapshot.data}');
-          String userId = snapshot.data?['user']['_id'] ?? '';
-
-          print('User ID: $userId');
-          if (userId.isEmpty) {
-            return Text('User ID not available'); // Handle the case where user ID is empty or null
-          }
-          return Center(
-            child: ElevatedButton(
-              onPressed: () {
-                if (userId != null) {
-                  _pickImageFromCamera(userId);
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                primary: Colors.red, // Background color
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20.0), // Rounded corners
-                ),
-              ),
-              child: Text('Take Picture of Car'),
-            ),
-          );
-        }
-      },
-    );
-  }
-
-
 
   Future<void> _pickImageFromCamera(String userId) async {
-    final pickedImage = await ImagePicker().pickImage(source: ImageSource.camera);
+    final pickedImage =
+    await ImagePicker().pickImage(source: ImageSource.camera);
     if (pickedImage == null) return;
 
     File selectedImage = File(pickedImage.path);
 
-    // Perform image upload with user ID
-    await _uploadImage(selectedImage, userId);
+    // Resize image to 300x300
+    File resizedImage = await _resizeImage(selectedImage);
+
+    // Run TensorFlow Lite model on the resized image
+    var recognitions = await Tflite.runModelOnImage(
+      path: resizedImage.path,
+      imageMean: 0.0,
+      imageStd: 255.0,
+      numResults: 2,
+      threshold: 0.2,
+      asynch: true,
+    );
+    if (recognitions == null || recognitions.isEmpty) {
+      devtools.log("Recognition result is empty");
+      return;
+    }
+
+    // Split recognition result
+    List<String> parts = recognitions[0]['label'].toString().split('_');
+    setState(() {
+      imagePath = resizedImage.path;
+      recognitionResult = recognitions[0]['label'].toString();
+      make = parts[0];
+      model = parts[1];
+      year = parts[2];
+    });
+    devtools.log(recognitions[0]['label'].toString());
+
+
+
+    // Ensure recognition result is available before uploading
+    if (recognitionResult != null && make != null && model != null && year != null) {
+      await _uploadImage(userId, make, model, year, selectedImage);
+    } else {
+      print("Recognition result or make/model/year is missing");
+    }
   }
 
-  Future<void> _uploadImage(File image, String userId) async {
+
+
+  Future<File> _resizeImage(File imageFile) async {
+    // Read the image from file
+    List<int> imageBytes = await imageFile.readAsBytes();
+    img.Image? image = img.decodeImage(imageBytes);
+
+    if (image == null) {
+      throw Exception('Failed to decode image.');
+    }
+
+
+    // Rotate the image 90 degrees to the right
+    img.Image rotatedImage = img.copyRotate(image, 90);
+
+
+    // Resize the image to 300x300
+    img.Image resizedImage = img.copyResize(rotatedImage, width: 300, height: 300);
+
+    // Write the resized image to a new file
+    File resizedFile = File(imageFile.path.replaceAll(RegExp(r'\.[^\.]+$'), '_resized.jpg'));
+    await resizedFile.writeAsBytes(img.encodeJpg(resizedImage));
+
+    return resizedFile;
+  }
+
+  Future<void> _uploadImage(String userId,String Make,String model,String year,File image) async {
     try {
       var request = http.MultipartRequest('POST', Uri.parse(carsave));
+
+      request.fields['userId'] = userId;
+      request.fields['Make'] = Make;
+      request.fields['model'] = model;
+      request.fields['year'] = year;
       request.files.add(await http.MultipartFile.fromPath('image', image.path));
-      request.fields['userId'] = userId; // Pass user ID as a field
+      // Pass user ID as a field
       var response = await request.send();
       if (response.statusCode == 200) {
         print('Image uploaded successfully');
@@ -411,7 +611,72 @@ class CameraWidget extends StatelessWidget {
       print('Error uploading image: $e');
     }
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _userInfoFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+            ),
+          );
+        } else if (snapshot.hasError) {
+          return Center(
+            child: Text('Error: ${snapshot.error}'),
+          );
+        } else {
+          print('Snapshot data: ${snapshot.data}');
+          String userId = snapshot.data?['user']['_id'] ?? '';
+
+          print('User ID: $userId');
+          if (userId.isEmpty) {
+            return Text('User ID not available');
+          }
+          return Center( // Wrap your Column with Center widget
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                imagePath != null
+                    ? Image.file(File(imagePath!))
+                    : Container(),
+                recognitionResult != null
+                    ? Column(
+                  children: [
+
+                    SizedBox(height: 10),
+                    make != null ? Text("Make: $make") : Container(),
+                    model != null ? Text("Model: $model") : Container(),
+                    year != null ? Text("Year: $year") : Container(),
+                  ],
+                )
+                    : Container(),
+                ElevatedButton(
+                  onPressed: () async { // Make the onPressed callback asynchronous
+                    await _pickImageFromCamera(userId); // Wait for image picking and recognition
+                    // Image has been picked and recognition is complete, now you can upload the image
+                  },
+                  style: ButtonStyle(
+                    backgroundColor: MaterialStateProperty.all<Color>(Colors.red),
+                    // Change button color to red
+                  ),
+                  child: Text(
+                    'Take Picture of Car',
+                    style: TextStyle(color: Colors.white), // Change text color to white
+                  ),
+                ),
+
+              ],
+            ),
+          );
+        }
+      },
+    );
+  }
 }
+
 
 
 
@@ -498,14 +763,14 @@ class UserWidget extends StatelessWidget {
               child: Container(
                 alignment: Alignment.center,
                 width: MediaQuery.of(context).size.width * 0.8,
-                margin: EdgeInsets.only(top: 90),
+                margin: EdgeInsets.only(top: 10),
                 child: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Change Username: "$username"',
-                        style: TextStyle(color: Colors.black, fontSize: 18.0, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: Colors.black, fontSize: 16.0, fontWeight: FontWeight.bold),
                       ),
                       SizedBox(height: 8.0),
                       TextField(
@@ -525,7 +790,7 @@ class UserWidget extends StatelessWidget {
                       SizedBox(height: 20.0),
                       Text(
                         'Change Email: "$email"',
-                        style: TextStyle(color: Colors.black, fontSize: 18.0 ,fontWeight: FontWeight.bold),
+                        style: TextStyle(color: Colors.black, fontSize: 16.0 ,fontWeight: FontWeight.bold),
                       ),
                       SizedBox(height: 8.0),
                       TextField(
@@ -545,7 +810,7 @@ class UserWidget extends StatelessWidget {
                       SizedBox(height: 20.0),
                       Text(
                         'Change Password: ',
-                        style: TextStyle(color: Colors.black, fontSize: 18.0, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: Colors.black, fontSize: 16.0, fontWeight: FontWeight.bold),
                       ),
                       SizedBox(height: 8.0),
                       TextField(
@@ -569,15 +834,15 @@ class UserWidget extends StatelessWidget {
                         child: ElevatedButton(
                           onPressed: () => updateUser(context, userId),
                           style: ElevatedButton.styleFrom(
-                            primary: Colors.red,
+                            backgroundColor: Colors.red,
                             textStyle: TextStyle(color: Colors.white),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
                             ),
                           ),
                           child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Text('Submit Changes'),
+                            padding: const EdgeInsets.all(18.0),
+                            child: Text('Submit Changes',style: TextStyle(color: Colors.white)),
                           ),
                         ),
                       ),
@@ -648,7 +913,8 @@ class UserhistWidget extends StatelessWidget {
           List<Car> cars = carList.map((carJson) {
             // Access the image URL from the carJson
             String? imageName = carJson['image'];
-            return Car.fromJson(carJson, imageName);
+
+            return Car.fromJson(carJson,imageName);
           }).toList();
           return cars;
         } else {
@@ -743,7 +1009,7 @@ class Car {
     return Car(
       imageName: imageName ?? '',
       userId: json['userId'],
-      make: json['make'] ?? '', // Default value if make is null
+      make: json['Make'] ?? '', // Default value if make is null
       model: json['model'] ?? '',
       year:json['year'] ?? '',
       inputPrice: json['inputPrice'] != null ? json['inputPrice'].toDouble() : 0,

@@ -1,15 +1,26 @@
+import 'dart:collection';
+import 'dart:convert';
 import 'dart:io';
 
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:chat_gpt_sdk/chat_gpt_sdk.dart';
 import 'package:dash_chat_2/dash_chat_2.dart';
 import 'consts.dart';
 import 'login.dart';
+import 'dart:async';
 import 'main.dart';
+import 'package:flutter_tflite/flutter_tflite.dart';
+import 'dart:typed_data';
+import 'package:flutter_native_image/flutter_native_image.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:ui' as ui;
 
+import 'package:image/image.dart' as img;
+import 'dart:developer' as devtools;
 class ThePageguest extends StatefulWidget {
   final int currentIndex;
   final Function(int) onTap;
@@ -34,7 +45,8 @@ class _ThePageguestState extends State<ThePageguest> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white, // Background color of the app bar
-        elevation: 0, // To remove the shadow below the app bar
+        elevation: 0,
+        automaticallyImplyLeading: false,// To remove the shadow below the app bar
         actions: [
           IconButton(
             icon: Icon(
@@ -42,6 +54,10 @@ class _ThePageguestState extends State<ThePageguest> {
               color: Colors.grey, // Color of the logout icon
             ),
             onPressed: () {
+
+
+                Tflite.close();
+
 
               Navigator.pushReplacement(
                 context,
@@ -90,91 +106,271 @@ class _ThePageguestState extends State<ThePageguest> {
     }
   }
 }
-class UploadWidget extends StatelessWidget {
+
+class UploadWidget extends StatefulWidget {
   @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          ElevatedButton(
-            onPressed: () {
-              _pickImageFromGallery();
-            },
-            style: ElevatedButton.styleFrom(
-              primary: Colors.red, // Set button color to red
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20.0), // Set border radius
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: Text(
-                'Upload Picture of Car from Gallery',
-                style: TextStyle(fontSize: 16.0),
-              ),
-            ),
-          ),
-        ],
-      ),
+  _UploadWidgetState createState() => _UploadWidgetState();
+}
+
+class _UploadWidgetState extends State<UploadWidget> {
+  late List<String> classes;
+  String? imagePath;
+  String? recognitionResult;
+  String? make;
+  String? model;
+  String? year;
+
+  @override
+  void initState() {
+    super.initState();
+    _tfLteInit();
+    _loadClasses();
+  }
+
+
+  Future<void> _tfLteInit() async {
+    String? res = await Tflite.loadModel(
+      model: "assets/model.tflite",
+      labels: "assets/Classes.txt",
+      numThreads: 1,
+      isAsset: true,
+      useGpuDelegate: false,
     );
+  }
+
+  Future<void> _loadClasses() async {
+    String data = await rootBundle.loadString('assets/Classes.txt');
+    setState(() {
+      classes = LineSplitter().convert(data);
+    });
   }
 
 
   Future<void> _pickImageFromGallery() async {
-    final pickedImage =
-    await ImagePicker().pickImage(source: ImageSource.gallery);
+    final pickedImage = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedImage == null) return;
 
-    // Do something with the picked image
     File selectedImage = File(pickedImage.path);
-    // ...
-  }
-}
 
-class CameraWidget extends StatelessWidget {
+    // Resize image to 300x300
+    File resizedImage = await _resizeImage(selectedImage);
+
+    // Run TensorFlow Lite model on the resized image
+    var recognitions = await Tflite.runModelOnImage(
+      path: resizedImage.path,
+      imageMean: 0.0,
+      imageStd: 255.0,
+      numResults: 2,
+      threshold: 0.2,
+      asynch: true,
+    );
+    if (recognitions == null) {
+      devtools.log("recognitions is Null");
+      return;
+    }
+    // Split recognition result
+    List<String> parts = recognitions[0]['label'].toString().split('_');
+    setState(() {
+      imagePath = resizedImage.path;
+      recognitionResult = recognitions[0]['label'].toString();
+      make = parts[0];
+      model = parts[1];
+      year = parts[2];
+    });
+    devtools.log(recognitions[0]['label'].toString());
+  }
+
+  Future<File> _resizeImage(File imageFile) async {
+    // Read the image from file
+    List<int> imageBytes = await imageFile.readAsBytes();
+    img.Image? image = img.decodeImage(imageBytes);
+
+    if (image == null) {
+      throw Exception('Failed to decode image.');
+    }
+
+    // Resize the image to 300x300
+    img.Image resizedImage = img.copyResize(image, width: 300, height: 300);
+
+    // Write the resized image to a new file
+    File resizedFile = File(imageFile.path.replaceAll(RegExp(r'\.[^\.]+$'), '_resized.jpg'));
+    await resizedFile.writeAsBytes(img.encodeJpg(resizedImage));
+
+    return resizedFile;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return Center( // Wrap your Column with Center widget
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          imagePath != null
+              ? Image.file(File(imagePath!))
+              : Container(),
+          recognitionResult != null
+              ? Column(
+            children: [
+
+                SizedBox(height: 10),
+                make != null ? Text("Make: $make") : Container(),
+                model != null ? Text("Model: $model") : Container(),
+                year != null ? Text("Year: $year") : Container(),
+            ],
+          )
+              : Container(),
           ElevatedButton(
             onPressed: () {
-              _pickImageFromCamera();
+              _pickImageFromGallery();
             },
-            style: ElevatedButton.styleFrom(
-              primary: Colors.red, // Set button color to red
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20.0), // Set border radius
-              ),
+            style: ButtonStyle(
+              backgroundColor: MaterialStateProperty.all<Color>(Colors.red),
+              // Change button color to red
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: Text(
-                'Take Picture of Car',
-                style: TextStyle(fontSize: 16.0),
-              ),
+            child: Text(
+              'Upload Picture of Car',
+              style: TextStyle(color: Colors.white), // Change text color to white
             ),
           ),
+
         ],
       ),
     );
   }
+}
+class CameraWidget extends StatefulWidget {
+  @override
+  _CameraWidgetState createState() => _CameraWidgetState();
+}
 
-  Future<void> _pickImageFromCamera() async {
+class _CameraWidgetState extends State<CameraWidget> {
+  late List<String> classes;
+  String? imagePath;
+  String? recognitionResult;
+  String? make;
+  String? model;
+  String? year;
+
+  @override
+  void initState() {
+    super.initState();
+    _tfLiteInit();
+    _loadClasses();
+  }
+
+
+  Future<void> _tfLiteInit() async {
+    String? res = await Tflite.loadModel(
+      model: "assets/model.tflite",
+      labels: "assets/Classes.txt",
+      numThreads: 1,
+      isAsset: true,
+      useGpuDelegate: false,
+    );
+  }
+
+  Future<void> _loadClasses() async {
+    String data = await rootBundle.loadString('assets/Classes.txt');
+    setState(() {
+      classes = LineSplitter().convert(data);
+    });
+  }
+
+  Future<void> _pickImageFromCamera(BuildContext context) async {
     final pickedImage =
     await ImagePicker().pickImage(source: ImageSource.camera);
     if (pickedImage == null) return;
 
-    // Do something with the captured image
     File selectedImage = File(pickedImage.path);
-    // ...
+
+    // Resize image to 300x300
+    File resizedImage = await _resizeImage(selectedImage);
+
+    // Run TensorFlow Lite model on the resized image
+    var recognitions = await Tflite.runModelOnImage(
+      path: resizedImage.path,
+      imageMean: 0.0,
+      imageStd: 255.0,
+      numResults: 2,
+      threshold: 0.2,
+      asynch: true,
+    );
+    if (recognitions == null) {
+      devtools.log("recognitions is Null");
+      return;
+    }
+    // Split recognition result
+    List<String> parts = recognitions[0]['label'].toString().split('_');
+    setState(() {
+      imagePath = resizedImage.path;
+      recognitionResult = recognitions[0]['label'].toString();
+      make = parts[0];
+      model = parts[1];
+      year = parts[2];
+    });
+    devtools.log(recognitions[0]['label'].toString());
+  }
+  Future<File> _resizeImage(File imageFile) async {
+    // Read the image from file
+    List<int> imageBytes = await imageFile.readAsBytes();
+    img.Image? image = img.decodeImage(imageBytes);
+
+    if (image == null) {
+      throw Exception('Failed to decode image.');
+    }
+
+    // Rotate the image 90 degrees to the right
+    img.Image rotatedImage = img.copyRotate(image, 90);
+
+    // Resize the rotated image to 300x300
+    img.Image resizedImage = img.copyResize(rotatedImage, width: 300, height: 300);
+
+    // Write the resized image to a new file
+    File resizedFile = File(imageFile.path.replaceAll(RegExp(r'\.[^\.]+$'), '_resized.jpg'));
+    await resizedFile.writeAsBytes(img.encodeJpg(resizedImage));
+
+    return resizedFile;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center( // Wrap your Column with Center widget
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          imagePath != null
+              ? Image.file(File(imagePath!))
+              : Container(),
+          recognitionResult != null
+              ? Column(
+            children: [
+
+                  SizedBox(height: 10),
+                  make != null ? Text("Make: $make") : Container(),
+                  model != null ? Text("Model: $model") : Container(),
+                  year != null ? Text("Year: $year") : Container(),
+            ],
+          )
+              : Container(),
+          ElevatedButton(
+            onPressed: () {
+              _pickImageFromCamera(context);
+            },
+            style: ButtonStyle(
+              backgroundColor: MaterialStateProperty.all<Color>(Colors.red),
+              // Change button color to red
+            ),
+            child: Text(
+              'Take Picture of Car',
+              style: TextStyle(color: Colors.white), // Change text color to white
+            ),
+          ),
+
+        ],
+      ),
+    );
   }
 }
-
-
-
 
 
 class MessagesWidget extends StatelessWidget {
@@ -200,7 +396,7 @@ class _ChatPageState extends State<ChatPage> {
     token: OPENAI_API_KEY,
     baseOption: HttpSetup(
       receiveTimeout: const Duration(
-        seconds: 5,
+        seconds: 30,
       ),
     ),
     enableLog: true,
@@ -256,7 +452,7 @@ class _ChatPageState extends State<ChatPage> {
     final request = ChatCompleteText(
       model: Gpt4ChatModel(),
       messages: _messagesHistory,
-      maxToken: 200,
+      maxToken: 400,
     );
     final response = await _openAI.onChatCompletion(request: request);
     for (var element in response!.choices) {

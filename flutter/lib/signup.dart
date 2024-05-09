@@ -74,10 +74,10 @@ class _SignupPageState extends State<SignupPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: true,
-      backgroundColor: Colors.black,
+      backgroundColor: Color.fromRGBO(30, 30, 30, 1),
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.black,
+        backgroundColor: Color.fromRGBO(30, 30, 30, 1),
         leading: IconButton(
           onPressed: () {
             Navigator.pop(context);
@@ -85,7 +85,7 @@ class _SignupPageState extends State<SignupPage> {
           icon: const Icon(
             Icons.arrow_back_ios,
             size: 20,
-            color: Colors.black,
+            color: Color.fromRGBO(30, 30, 30, 1),
           ),
         ),
       ),
@@ -178,10 +178,10 @@ class _SignupPageState extends State<SignupPage> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(50),
                     border: const Border(
-                      bottom: BorderSide(color: Colors.black),
-                      top: BorderSide(color: Colors.black),
-                      left: BorderSide(color: Colors.black),
-                      right: BorderSide(color: Colors.black),
+                      bottom: BorderSide(color: Color.fromRGBO(30, 30, 30, 1)),
+                      top: BorderSide(color: Color.fromRGBO(30, 30, 30, 1)),
+                      left: BorderSide(color: Color.fromRGBO(30, 30, 30, 1)),
+                      right: BorderSide(color: Color.fromRGBO(30, 30, 30, 1)),
                     ),
                   ),
                   child: MaterialButton(
@@ -198,7 +198,7 @@ class _SignupPageState extends State<SignupPage> {
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 18,
-                        color: Colors.black,
+                        color: Color.fromRGBO(30, 30, 30, 1),
                       ),
                     ),
                   ),
@@ -256,7 +256,7 @@ Widget inputFile({label, obscureText = false, required TextEditingController con
       TextFormField(
         controller: controller,
         obscureText: obscureText,
-        style: const TextStyle(color: Colors.black), // Set text color to black
+        style: const TextStyle(color: Color.fromRGBO(30, 30, 30, 1)), // Set text color to black
         validator: validator, // Add validator function
         decoration: InputDecoration(
           filled: true,

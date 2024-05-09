@@ -28,7 +28,8 @@ class _AdminPageState extends State<AdminPage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white, // Background color of the app bar
-        elevation: 0, // To remove the shadow below the app bar
+        elevation: 0,
+        automaticallyImplyLeading: false,// To remove the shadow below the app bar
         actions: [
           IconButton(
             icon: Icon(
@@ -193,8 +194,10 @@ class _UsersWidgetState extends State<UsersWidget> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Text('userId: ${selectedUser!['_id']}'),
                         Text('Username: ${selectedUser!['username']}'),
                         Text('Email: ${selectedUser!['email']}'),
+                        Text('numberOfCars: ${selectedUser!['numberOfCars']}'),
                         Text('Created At: ${selectedUser!['createdAt']}'),
                         Text('Updated At: ${selectedUser!['updatedAt']}'),
                         SizedBox(height: 10),
@@ -228,8 +231,8 @@ class _UsersWidgetState extends State<UsersWidget> {
               return Card(
                 margin: EdgeInsets.all(8.0),
                 child: ListTile(
-                  title: Text(users[index]['username']),
-                  subtitle: Text(users[index]['email']),
+                  title: Text('Username:'+ users[index]['username']),
+                  subtitle: Text('userId:'+ users[index]['_id']),
                   onTap: () {
                     // Call showUserDetails method when user is tapped
                     showUserDetails(users[index]);
@@ -358,7 +361,7 @@ class Car {
       id: json['_id'],
       imageName: imageName ?? '',
       userId: json['userId'],
-      make: json['make'] ?? '', // Default value if make is null
+      make: json['Make'] ?? '', // Default value if make is null
       model: json['model'] ?? '',
       year: json['year'] ?? '',
       inputPrice: json['inputPrice'] != null ? json['inputPrice'].toDouble() : 0,
@@ -420,6 +423,7 @@ class CarCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  Text('userId: ${car.userId}'),
                   Text('Make: ${car.make}'),
                   Text('Model: ${car.model}'),
                   Text('Year: ${car.year ?? ''}'),

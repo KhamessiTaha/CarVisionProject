@@ -95,8 +95,8 @@ class HomePage extends StatelessWidget {
                     height: 60,
                     onPressed: () {
                       Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const SignupPage()));
+                          context,
+                          MaterialPageRoute(builder: (context) => const SignupPage()));
                     },
                     color: Colors.red,
                     shape: RoundedRectangleBorder(

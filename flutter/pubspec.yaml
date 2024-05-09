@@ -1,5 +1,5 @@
-name: untitled1
-description: A new Flutter project.
+name: carvision
+description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.1.2 <4.0.0'
+  sdk: '>=3.3.4 <4.0.0'
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -30,40 +30,44 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  image_picker: ^1.0.7
-  path_provider: ^2.1.2
+  image_picker: ^0.8.9
+  path_provider: ^2.0.2
   http:
   shared_preferences:
   jwt_decoder:
   provider: ^5.0.0
   dash_chat_2: ^0.0.18
   chat_gpt_sdk: ^2.2.5
-
+  flutter_tflite: ^1.0.1
+  image: ^3.0.2
+  flutter_native_image: ^0.0.6
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.2
+  cupertino_icons: ^1.0.6
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^2.0.0
+  flutter_lints: ^3.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
 # The following section is specific to Flutter packages.
 flutter:
-
   assets:
     - assets/search.png
-
+    - assets/model.tflite
+    - assets/Classes.txt
+    - assets/best_model.tflite
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
@@ -100,4 +104,3 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages
-
