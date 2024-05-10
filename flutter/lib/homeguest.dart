@@ -18,9 +18,16 @@ import 'dart:typed_data';
 import 'package:flutter_native_image/flutter_native_image.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:ui' as ui;
+import 'package:csv/csv.dart';
+
+import 'package:flutter/services.dart' show rootBundle;
 
 import 'package:image/image.dart' as img;
 import 'dart:developer' as devtools;
+
+
+
+
 class ThePageguest extends StatefulWidget {
   final int currentIndex;
   final Function(int) onTap;
@@ -119,13 +126,100 @@ class _UploadWidgetState extends State<UploadWidget> {
   String? make;
   String? model;
   String? year;
+  double? inputPrice; // Variable to hold the entry price
+  double? predictedPrice; // Variable to hold the predicted price
+  List<Map<String, dynamic>> _data = [];
 
   @override
   void initState() {
     super.initState();
     _tfLteInit();
     _loadClasses();
+    _loadCSV();
   }
+
+
+
+  void _loadCSV() async {
+    final String rawData = await rootBundle.loadString("assets/my_csv.csv");
+
+    List<String> lines = rawData.split('\n'); // Split data into lines
+
+    // Skip the first line assuming it's the header
+    List<Map<String, dynamic>> parsedData = [];
+
+
+    for (int i = 1; i < lines.length; i++) {
+      List<String> columns = lines[i].split(','); // Split each line into columns
+
+      if (columns.length != 6) {
+        // Ensure each line has exactly 6 columns
+        devtools.log("Error parsing data at line $i: Invalid number of columns");
+        continue;
+      }
+
+      // Extract data from columns
+      String brand = columns[1].trim();
+      int manufactureYear = int.tryParse(columns[2].trim()) ?? 0;
+      int carAge2024 = int.tryParse(columns[3].trim()) ?? 0;
+      double entryPrice = double.tryParse(columns[4].trim()) ?? 0.0;
+      double price2024 = double.tryParse(columns[5].trim()) ?? 0.0;
+
+      // Add parsed data to the list
+      parsedData.add({
+        'Brand': brand,
+        'Manifacture_Year': manufactureYear,
+        'Car_Age_2024': carAge2024,
+        'Entry_price': entryPrice,
+        'Price_2024': price2024,
+      });
+
+
+    }
+
+    // Assign parsed data to _data
+    _data = parsedData;
+
+
+
+    setState(() {}); // Trigger a rebuild to reflect loaded data
+  }
+
+
+
+  Map<String, dynamic> getPricesByBrand(String brandName) {
+    List<String> parts = brandName.split('_');
+    if (parts.length < 3) {
+      devtools.log("Invalid brand name format: $brandName");
+      return {"error": "Invalid brand name format."};
+    }
+
+
+    int manufactureYear = int.tryParse(parts[2]) ?? 0;
+
+
+    List<Map<String, dynamic>> filteredData = _data.where((element) =>
+    element['Brand'] == brandName &&
+        element['Manifacture_Year'] == manufactureYear).toList();
+
+    if (filteredData.isEmpty) {
+      devtools.log("No data found for the given brand and year: $brandName");
+      return {"error": "No data found for the given brand and year."};
+    }
+
+    double entryPrice = filteredData[0]['Entry_price'];
+    double price2024 = filteredData[0]['Price_2024'];
+
+    inputPrice = entryPrice;
+    predictedPrice = price2024;
+
+    devtools.log("Entry Price: $entryPrice, Price in 2024: $price2024");
+
+    return {"entryPrice": entryPrice, "price2024": price2024};
+  }
+
+
+
 
 
   Future<void> _tfLteInit() async {
@@ -177,6 +271,8 @@ class _UploadWidgetState extends State<UploadWidget> {
       model = parts[1];
       year = parts[2];
     });
+    Map<String, dynamic> prices = getPricesByBrand(recognitionResult!);
+    devtools.log("Prices for $recognitionResult: $prices");
     devtools.log(recognitions[0]['label'].toString());
   }
 
@@ -216,6 +312,8 @@ class _UploadWidgetState extends State<UploadWidget> {
                 make != null ? Text("Make: $make") : Container(),
                 model != null ? Text("Model: $model") : Container(),
                 year != null ? Text("Year: $year") : Container(),
+                inputPrice != null ? Text("Entry Price: ${inputPrice.toString()}") : Container(),
+                predictedPrice != null ? Text("Predicted Price in 2024: ${predictedPrice.toString()}") : Container(),
             ],
           )
               : Container(),
@@ -250,13 +348,98 @@ class _CameraWidgetState extends State<CameraWidget> {
   String? make;
   String? model;
   String? year;
+  double? inputPrice; // Variable to hold the entry price
+  double? predictedPrice; // Variable to hold the predicted price
+  List<Map<String, dynamic>> _data = [];
 
   @override
   void initState() {
     super.initState();
     _tfLiteInit();
     _loadClasses();
+    _loadCSV();
   }
+
+
+  void _loadCSV() async {
+    final String rawData = await rootBundle.loadString("assets/my_csv.csv");
+
+    List<String> lines = rawData.split('\n'); // Split data into lines
+
+    // Skip the first line assuming it's the header
+    List<Map<String, dynamic>> parsedData = [];
+
+
+    for (int i = 1; i < lines.length; i++) {
+      List<String> columns = lines[i].split(','); // Split each line into columns
+
+      if (columns.length != 6) {
+        // Ensure each line has exactly 6 columns
+        devtools.log("Error parsing data at line $i: Invalid number of columns");
+        continue;
+      }
+
+      // Extract data from columns
+      String brand = columns[1].trim();
+      int manufactureYear = int.tryParse(columns[2].trim()) ?? 0;
+      int carAge2024 = int.tryParse(columns[3].trim()) ?? 0;
+      double entryPrice = double.tryParse(columns[4].trim()) ?? 0.0;
+      double price2024 = double.tryParse(columns[5].trim()) ?? 0.0;
+
+      // Add parsed data to the list
+      parsedData.add({
+        'Brand': brand,
+        'Manifacture_Year': manufactureYear,
+        'Car_Age_2024': carAge2024,
+        'Entry_price': entryPrice,
+        'Price_2024': price2024,
+      });
+
+
+    }
+
+    // Assign parsed data to _data
+    _data = parsedData;
+
+
+
+    setState(() {}); // Trigger a rebuild to reflect loaded data
+  }
+
+
+
+  Map<String, dynamic> getPricesByBrand(String brandName) {
+    List<String> parts = brandName.split('_');
+    if (parts.length < 3) {
+      devtools.log("Invalid brand name format: $brandName");
+      return {"error": "Invalid brand name format."};
+    }
+
+
+    int manufactureYear = int.tryParse(parts[2]) ?? 0;
+
+
+    List<Map<String, dynamic>> filteredData = _data.where((element) =>
+    element['Brand'] == brandName &&
+        element['Manifacture_Year'] == manufactureYear).toList();
+
+    if (filteredData.isEmpty) {
+      devtools.log("No data found for the given brand and year: $brandName");
+      return {"error": "No data found for the given brand and year."};
+    }
+
+    double entryPrice = filteredData[0]['Entry_price'];
+    double price2024 = filteredData[0]['Price_2024'];
+
+    inputPrice = entryPrice;
+    predictedPrice = price2024;
+
+    devtools.log("Entry Price: $entryPrice, Price in 2024: $price2024");
+
+    return {"entryPrice": entryPrice, "price2024": price2024};
+  }
+
+
 
 
   Future<void> _tfLiteInit() async {
@@ -308,6 +491,8 @@ class _CameraWidgetState extends State<CameraWidget> {
       model = parts[1];
       year = parts[2];
     });
+    Map<String, dynamic> prices = getPricesByBrand(recognitionResult!);
+    devtools.log("Prices for $recognitionResult: $prices");
     devtools.log(recognitions[0]['label'].toString());
   }
   Future<File> _resizeImage(File imageFile) async {
@@ -349,6 +534,8 @@ class _CameraWidgetState extends State<CameraWidget> {
                   make != null ? Text("Make: $make") : Container(),
                   model != null ? Text("Model: $model") : Container(),
                   year != null ? Text("Year: $year") : Container(),
+                  inputPrice != null ? Text("Entry Price: ${inputPrice.toString()}") : Container(),
+                  predictedPrice != null ? Text("Predicted Price in 2024: ${predictedPrice.toString()}") : Container(),
             ],
           )
               : Container(),

@@ -18,6 +18,7 @@ import 'main.dart';
 import 'package:flutter_tflite/flutter_tflite.dart';
 import 'dart:developer' as devtools;
 import 'package:image/image.dart' as img;
+import 'package:flutter/services.dart' show rootBundle;
 class ThePage extends StatefulWidget {
   final token;
   final int currentIndex;
@@ -240,6 +241,9 @@ class _UploadWidgetState extends State<UploadWidget> {
   String make="";
   String model="";
   String year="";
+  double inputPrice=0.0; // Variable to hold the entry price
+  double predictedPrice=0.0; // Variable to hold the predicted price
+  List<Map<String, dynamic>> _data = [];
 
 
   @override
@@ -248,7 +252,92 @@ class _UploadWidgetState extends State<UploadWidget> {
     _tfLteInit();
     _loadClasses();
     _userInfoFuture = _getUserInfo();
+    _loadCSV();
   }
+
+
+
+
+  void _loadCSV() async {
+    final String rawData = await rootBundle.loadString("assets/my_csv.csv");
+
+    List<String> lines = rawData.split('\n'); // Split data into lines
+
+    // Skip the first line assuming it's the header
+    List<Map<String, dynamic>> parsedData = [];
+
+
+    for (int i = 1; i < lines.length; i++) {
+      List<String> columns = lines[i].split(','); // Split each line into columns
+
+      if (columns.length != 6) {
+        // Ensure each line has exactly 6 columns
+        devtools.log("Error parsing data at line $i: Invalid number of columns");
+        continue;
+      }
+
+      // Extract data from columns
+      String brand = columns[1].trim();
+      int manufactureYear = int.tryParse(columns[2].trim()) ?? 0;
+      int carAge2024 = int.tryParse(columns[3].trim()) ?? 0;
+      double entryPrice = double.tryParse(columns[4].trim()) ?? 0.0;
+      double price2024 = double.tryParse(columns[5].trim()) ?? 0.0;
+
+      // Add parsed data to the list
+      parsedData.add({
+        'Brand': brand,
+        'Manifacture_Year': manufactureYear,
+        'Car_Age_2024': carAge2024,
+        'Entry_price': entryPrice,
+        'Price_2024': price2024,
+      });
+
+
+    }
+
+    // Assign parsed data to _data
+    _data = parsedData;
+
+
+
+    setState(() {}); // Trigger a rebuild to reflect loaded data
+  }
+
+
+
+  Map<String, dynamic> getPricesByBrand(String brandName) {
+    List<String> parts = brandName.split('_');
+    if (parts.length < 3) {
+      devtools.log("Invalid brand name format: $brandName");
+      return {"error": "Invalid brand name format."};
+    }
+
+
+    int manufactureYear = int.tryParse(parts[2]) ?? 0;
+
+
+    List<Map<String, dynamic>> filteredData = _data.where((element) =>
+    element['Brand'] == brandName &&
+        element['Manifacture_Year'] == manufactureYear).toList();
+
+    if (filteredData.isEmpty) {
+      devtools.log("No data found for the given brand and year: $brandName");
+      return {"error": "No data found for the given brand and year."};
+    }
+
+    double entryPrice = filteredData[0]['Entry_price'];
+    double price2024 = filteredData[0]['Price_2024'];
+
+    inputPrice = entryPrice;
+    predictedPrice = price2024;
+
+    devtools.log("Entry Price: $entryPrice, Price in 2024: $price2024");
+
+    return {"entryPrice": entryPrice, "price2024": price2024};
+  }
+
+
+
 
 
 
@@ -319,22 +408,36 @@ class _UploadWidgetState extends State<UploadWidget> {
       return;
     }
 
+    recognitionResult = recognitions[0]['label'].toString();
+
+    Map<String, dynamic> prices = getPricesByBrand(recognitionResult!);
+    devtools.log("Prices for $recognitionResult: $prices");
+
+
+
+
     // Split recognition result
     List<String> parts = recognitions[0]['label'].toString().split('_');
     setState(() {
       imagePath = resizedImage.path;
-      recognitionResult = recognitions[0]['label'].toString();
+
       make = parts[0];
       model = parts[1];
       year = parts[2];
+      inputPrice = prices["entryPrice"];
+      predictedPrice = prices["price2024"];
+
     });
+
+    devtools.log("Input Price: $inputPrice");
+
     devtools.log(recognitions[0]['label'].toString());
 
 
 
     // Ensure recognition result is available before uploading
-    if (recognitionResult != null && make != null && model != null && year != null) {
-      await _uploadImage(userId, make, model, year, selectedImage);
+    if (recognitionResult != null && make != null && model != null && year != null&& inputPrice != 0.0 && predictedPrice != 0.0) {
+      await _uploadImage(userId, make, model, year,inputPrice,predictedPrice, selectedImage);
     } else {
       print("Recognition result or make/model/year is missing");
     }
@@ -361,7 +464,7 @@ class _UploadWidgetState extends State<UploadWidget> {
     return resizedFile;
   }
 
-  Future<void> _uploadImage(String userId,String Make,String model,String year,File image) async {
+  Future<void> _uploadImage(String userId,String Make,String model,String year,double inputPrice,double predictedPrice, File image) async {
     try {
       var request = http.MultipartRequest('POST', Uri.parse(carsave));
 
@@ -369,6 +472,8 @@ class _UploadWidgetState extends State<UploadWidget> {
       request.fields['Make'] = Make;
       request.fields['model'] = model;
       request.fields['year'] = year;
+      request.fields['input_Price'] = inputPrice.toString();
+      request.fields['predicted_price'] = predictedPrice.toString();
       request.files.add(await http.MultipartFile.fromPath('image', image.path));
        // Pass user ID as a field
       var response = await request.send();
@@ -413,10 +518,12 @@ class _UploadWidgetState extends State<UploadWidget> {
                     ? Column(
                   children: [
 
-                    SizedBox(height: 10),
-                    make != null ? Text("Make: $make") : Container(),
-                    model != null ? Text("Model: $model") : Container(),
-                    year != null ? Text("Year: $year") : Container(),
+                        SizedBox(height: 10),
+                        make != null ? Text("Make: $make") : Container(),
+                        model != null ? Text("Model: $model") : Container(),
+                        year != null ? Text("Year: $year") : Container(),
+                        inputPrice != null ? Text("Entry Price: ${inputPrice.toString()}") : Container(),
+                        predictedPrice != null ? Text("Predicted Price in 2024: ${predictedPrice.toString()}") : Container(),
                   ],
                 )
                     : Container(),
@@ -462,6 +569,9 @@ class _CameraWidgetState extends State<CameraWidget> {
   String make="";
   String model="";
   String year="";
+  double inputPrice=0.0; // Variable to hold the entry price
+  double predictedPrice=0.0; // Variable to hold the predicted price
+  List<Map<String, dynamic>> _data = [];
 
 
   @override
@@ -470,7 +580,97 @@ class _CameraWidgetState extends State<CameraWidget> {
     _tfLteInit();
     _loadClasses();
     _userInfoFuture = _getUserInfo();
+    _loadCSV();
   }
+
+
+
+
+
+  void _loadCSV() async {
+    final String rawData = await rootBundle.loadString("assets/my_csv.csv");
+
+    List<String> lines = rawData.split('\n'); // Split data into lines
+
+    // Skip the first line assuming it's the header
+    List<Map<String, dynamic>> parsedData = [];
+
+
+    for (int i = 1; i < lines.length; i++) {
+      List<String> columns = lines[i].split(','); // Split each line into columns
+
+      if (columns.length != 6) {
+        // Ensure each line has exactly 6 columns
+        devtools.log("Error parsing data at line $i: Invalid number of columns");
+        continue;
+      }
+
+      // Extract data from columns
+      String brand = columns[1].trim();
+      int manufactureYear = int.tryParse(columns[2].trim()) ?? 0;
+      int carAge2024 = int.tryParse(columns[3].trim()) ?? 0;
+      double entryPrice = double.tryParse(columns[4].trim()) ?? 0.0;
+      double price2024 = double.tryParse(columns[5].trim()) ?? 0.0;
+
+      // Add parsed data to the list
+      parsedData.add({
+        'Brand': brand,
+        'Manifacture_Year': manufactureYear,
+        'Car_Age_2024': carAge2024,
+        'Entry_price': entryPrice,
+        'Price_2024': price2024,
+      });
+
+
+    }
+
+    // Assign parsed data to _data
+    _data = parsedData;
+
+
+
+    setState(() {}); // Trigger a rebuild to reflect loaded data
+  }
+
+
+
+  Map<String, dynamic> getPricesByBrand(String brandName) {
+    List<String> parts = brandName.split('_');
+    if (parts.length < 3) {
+      devtools.log("Invalid brand name format: $brandName");
+      return {"error": "Invalid brand name format."};
+    }
+
+
+    int manufactureYear = int.tryParse(parts[2]) ?? 0;
+
+
+    List<Map<String, dynamic>> filteredData = _data.where((element) =>
+    element['Brand'] == brandName &&
+        element['Manifacture_Year'] == manufactureYear).toList();
+
+    if (filteredData.isEmpty) {
+      devtools.log("No data found for the given brand and year: $brandName");
+      return {"error": "No data found for the given brand and year."};
+    }
+
+    double entryPrice = filteredData[0]['Entry_price'];
+    double price2024 = filteredData[0]['Price_2024'];
+
+    inputPrice = entryPrice;
+    predictedPrice = price2024;
+
+    devtools.log("Entry Price: $entryPrice, Price in 2024: $price2024");
+
+    return {"entryPrice": entryPrice, "price2024": price2024};
+  }
+
+
+
+
+
+
+
 
 
 
@@ -544,26 +744,41 @@ class _CameraWidgetState extends State<CameraWidget> {
       return;
     }
 
+    recognitionResult = recognitions[0]['label'].toString();
+
+    Map<String, dynamic> prices = getPricesByBrand(recognitionResult!);
+    devtools.log("Prices for $recognitionResult: $prices");
+
+
+
+
     // Split recognition result
     List<String> parts = recognitions[0]['label'].toString().split('_');
     setState(() {
       imagePath = resizedImage.path;
-      recognitionResult = recognitions[0]['label'].toString();
+
       make = parts[0];
       model = parts[1];
       year = parts[2];
+      inputPrice = prices["entryPrice"];
+      predictedPrice = prices["price2024"];
+
     });
+
+    devtools.log("Input Price: $inputPrice");
+
     devtools.log(recognitions[0]['label'].toString());
 
 
 
     // Ensure recognition result is available before uploading
-    if (recognitionResult != null && make != null && model != null && year != null) {
-      await _uploadImage(userId, make, model, year, selectedImage);
+    if (recognitionResult != null && make != null && model != null && year != null&& inputPrice != 0.0 && predictedPrice != 0.0) {
+      await _uploadImage(userId, make, model, year,inputPrice,predictedPrice, selectedImage);
     } else {
       print("Recognition result or make/model/year is missing");
     }
   }
+
 
 
 
@@ -591,7 +806,7 @@ class _CameraWidgetState extends State<CameraWidget> {
     return resizedFile;
   }
 
-  Future<void> _uploadImage(String userId,String Make,String model,String year,File image) async {
+  Future<void> _uploadImage(String userId,String Make,String model,String year,double inputPrice,double predictedPrice, File image) async {
     try {
       var request = http.MultipartRequest('POST', Uri.parse(carsave));
 
@@ -599,6 +814,8 @@ class _CameraWidgetState extends State<CameraWidget> {
       request.fields['Make'] = Make;
       request.fields['model'] = model;
       request.fields['year'] = year;
+      request.fields['input_Price'] = inputPrice.toString();
+      request.fields['predicted_price'] = predictedPrice.toString();
       request.files.add(await http.MultipartFile.fromPath('image', image.path));
       // Pass user ID as a field
       var response = await request.send();
@@ -650,6 +867,8 @@ class _CameraWidgetState extends State<CameraWidget> {
                     make != null ? Text("Make: $make") : Container(),
                     model != null ? Text("Model: $model") : Container(),
                     year != null ? Text("Year: $year") : Container(),
+                    inputPrice != null ? Text("Entry Price: ${inputPrice.toString()}") : Container(),
+                    predictedPrice != null ? Text("Predicted Price in 2024: ${predictedPrice.toString()}") : Container(),
                   ],
                 )
                     : Container(),
@@ -985,8 +1204,8 @@ class Car {
   final String make;
   final String model;
   final String? year;
-  final double? inputPrice;
-  final double? predictedPrice;
+  final String? inputPrice;
+  final String? predictedPrice;
 
 
   Car({this.userId, required this.imageName,
@@ -1012,8 +1231,8 @@ class Car {
       make: json['Make'] ?? '', // Default value if make is null
       model: json['model'] ?? '',
       year:json['year'] ?? '',
-      inputPrice: json['inputPrice'] != null ? json['inputPrice'].toDouble() : 0,
-      predictedPrice: json['predictedPrice'] != null ? json['predictedPrice'].toDouble() : 0,// Default value if model is null
+      inputPrice: json['input_Price'] ?? '' ,
+      predictedPrice: json['predicted_price'] ?? '' ,
     );
   }
 }
@@ -1038,8 +1257,8 @@ class CarCard extends StatelessWidget {
                   Text('Make: ${car.make}'),
                   Text('Model: ${car.model}'),
                   Text('Year: ${car.year ?? ''}'),
-                  Text('Input Price: ${car.inputPrice ?? 0}'),
-                  Text('Predicted Price: ${car.predictedPrice ?? 0}'),
+                  Text('Input Price: ${car.inputPrice ?? ''}'),
+                  Text('Predicted Price: ${car.predictedPrice ?? ''}'),
                 ],
               ),
               actions: [

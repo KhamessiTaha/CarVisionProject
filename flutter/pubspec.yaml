@@ -41,6 +41,7 @@ dependencies:
   flutter_tflite: ^1.0.1
   image: ^3.0.2
   flutter_native_image: ^0.0.6
+  csv: ^6.0.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -68,6 +69,7 @@ flutter:
     - assets/model.tflite
     - assets/Classes.txt
     - assets/best_model.tflite
+    - assets/my_csv.csv
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
