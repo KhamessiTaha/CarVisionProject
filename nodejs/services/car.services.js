@@ -1,9 +1,19 @@
 const CarModel = require("../model/car.model");
+const UserModel = require("../model/user.model");
 
 class CarService{
-    static async savecar(userId,Make,model,year,input_Price,predicted_price,image){
-            const savecar = new CarModel({userId,Make,model,year,input_Price,predicted_price,image});
-            return await savecar.save();
+    static async savecar(userId, Make, model, year, input_Price, predicted_price, image) {
+        try {
+            const savecar = new CarModel({ userId, Make, model, year, input_Price, predicted_price, image });
+            const savedCar = await savecar.save();
+
+            // Update numberOfCars in the user model
+            await UserModel.findByIdAndUpdate(userId, { $inc: { numberOfCars: 1 } });
+
+            return savedCar;
+        } catch (error) {
+            throw error;
+        }
     }
     static async deletecar(carId) {
         try {

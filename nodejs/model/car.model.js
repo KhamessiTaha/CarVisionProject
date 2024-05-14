@@ -18,10 +18,10 @@ const CarSchema = new Schema({
         type: String,
     },
     input_Price: {
-        type: Number,
+        type: String,
     },
     predicted_price: {
-        type: Number,
+        type: String,
     },
     image: {
         type: String,

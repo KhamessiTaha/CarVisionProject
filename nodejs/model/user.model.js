@@ -23,6 +23,10 @@ const userSchema = new Schema({
     isAdmin: {
         type: Boolean,
         default: false
+    },
+    numberOfCars: {
+        type: Number,
+        default: 0
     }
 },
 {

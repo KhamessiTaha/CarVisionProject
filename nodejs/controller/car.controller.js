@@ -1,5 +1,6 @@
 const CarService = require('../services/car.services');
 
+
 exports.savecar =  async (req,res,next)=>{
     try {
         if (!req.file || !req.file.path) {
@@ -9,6 +10,7 @@ exports.savecar =  async (req,res,next)=>{
         const { userId,Make,model,year,input_Price,predicted_price } = req.body;
         let CarData = await CarService.savecar(userId,Make,model,year,input_Price,predicted_price,imagee);
         res.json({status: true,success:CarData});
+        
     } catch (error) {
         console.log(error, 'err---->');
         next(error);
