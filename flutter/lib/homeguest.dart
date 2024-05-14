@@ -312,8 +312,8 @@ class _UploadWidgetState extends State<UploadWidget> {
                 make != null ? Text("Make: $make") : Container(),
                 model != null ? Text("Model: $model") : Container(),
                 year != null ? Text("Year: $year") : Container(),
-                inputPrice != null ? Text("Entry Price: ${inputPrice.toString()}") : Container(),
-                predictedPrice != null ? Text("Predicted Price in 2024: ${predictedPrice.toString()}") : Container(),
+                inputPrice != null ? Text("Entry Price: ${inputPrice.toString()} TND") : Container(),
+                predictedPrice != null ? Text("Predicted Price in 2024: ${predictedPrice.toString()} TND") : Container(),
             ],
           )
               : Container(),
@@ -534,8 +534,8 @@ class _CameraWidgetState extends State<CameraWidget> {
                   make != null ? Text("Make: $make") : Container(),
                   model != null ? Text("Model: $model") : Container(),
                   year != null ? Text("Year: $year") : Container(),
-                  inputPrice != null ? Text("Entry Price: ${inputPrice.toString()}") : Container(),
-                  predictedPrice != null ? Text("Predicted Price in 2024: ${predictedPrice.toString()}") : Container(),
+                  inputPrice != null ? Text("Entry Price: ${inputPrice.toString()} TND") : Container(),
+                  predictedPrice != null ? Text("Predicted Price in 2024: ${predictedPrice.toString()} TND") : Container(),
             ],
           )
               : Container(),

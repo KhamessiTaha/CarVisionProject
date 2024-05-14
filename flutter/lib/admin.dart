@@ -335,8 +335,8 @@ class Car {
   final String make;
   final String model;
   final String? year;
-  final double? inputPrice;
-  final double? predictedPrice;
+  final String? inputPrice;
+  final String? predictedPrice;
 
   Car({
     this.id, // Update id to be nullable
@@ -364,8 +364,8 @@ class Car {
       make: json['Make'] ?? '', // Default value if make is null
       model: json['model'] ?? '',
       year: json['year'] ?? '',
-      inputPrice: json['inputPrice'] != null ? json['inputPrice'].toDouble() : 0,
-      predictedPrice: json['predictedPrice'] != null ? json['predictedPrice'].toDouble() : 0,
+      inputPrice: json['input_Price'] ?? '',
+      predictedPrice: json['predicted_price'] ?? '',
     );
   }
 }
@@ -427,8 +427,8 @@ class CarCard extends StatelessWidget {
                   Text('Make: ${car.make}'),
                   Text('Model: ${car.model}'),
                   Text('Year: ${car.year ?? ''}'),
-                  Text('Input Price: ${car.inputPrice ?? 0}'),
-                  Text('Predicted Price: ${car.predictedPrice ?? 0}'),
+                  Text('Input Price: ${car.inputPrice ?? ''} TND'),
+                  Text('Predicted Price: ${car.predictedPrice ?? ''} TND'),
                 ],
               ),
               actions: [

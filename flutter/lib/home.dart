@@ -522,8 +522,8 @@ class _UploadWidgetState extends State<UploadWidget> {
                         make != null ? Text("Make: $make") : Container(),
                         model != null ? Text("Model: $model") : Container(),
                         year != null ? Text("Year: $year") : Container(),
-                        inputPrice != null ? Text("Entry Price: ${inputPrice.toString()}") : Container(),
-                        predictedPrice != null ? Text("Predicted Price in 2024: ${predictedPrice.toString()}") : Container(),
+                        inputPrice != null ? Text("Entry Price: ${inputPrice.toString()} TND") : Container(),
+                        predictedPrice != null ? Text("Predicted Price in 2024: ${predictedPrice.toString()} TND") : Container(),
                   ],
                 )
                     : Container(),
@@ -867,8 +867,8 @@ class _CameraWidgetState extends State<CameraWidget> {
                     make != null ? Text("Make: $make") : Container(),
                     model != null ? Text("Model: $model") : Container(),
                     year != null ? Text("Year: $year") : Container(),
-                    inputPrice != null ? Text("Entry Price: ${inputPrice.toString()}") : Container(),
-                    predictedPrice != null ? Text("Predicted Price in 2024: ${predictedPrice.toString()}") : Container(),
+                    inputPrice != null ? Text("Entry Price: ${inputPrice.toString()} TND") : Container(),
+                    predictedPrice != null ? Text("Predicted Price in 2024: ${predictedPrice.toString()} TND") : Container(),
                   ],
                 )
                     : Container(),
@@ -1257,8 +1257,8 @@ class CarCard extends StatelessWidget {
                   Text('Make: ${car.make}'),
                   Text('Model: ${car.model}'),
                   Text('Year: ${car.year ?? ''}'),
-                  Text('Input Price: ${car.inputPrice ?? ''}'),
-                  Text('Predicted Price: ${car.predictedPrice ?? ''}'),
+                  Text('Input Price: ${car.inputPrice ?? ''} TND'),
+                  Text('Predicted Price: ${car.predictedPrice ?? ''} TND'),
                 ],
               ),
               actions: [
