@@ -68,7 +68,6 @@ flutter:
     - assets/search.png
     - assets/model.tflite
     - assets/Classes.txt
-    - assets/best_model.tflite
     - assets/my_csv.csv
 
   # The following line ensures that the Material Icons font is
