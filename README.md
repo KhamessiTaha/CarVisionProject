@@ -101,7 +101,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Coursework: Software Engineering and Information Systems
 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-%230077B5.svg?style=flat&logo=linkedin&logoColor=white)](https://linkedin.com/in/taha-khamessi-396aba1a3/)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-%230077B5.svg?style=flat&logo=linkedin&logoColor=white)](https://linkedin.com/in/louai-lamsi/)
 [![GitHub](https://img.shields.io/badge/GitHub-%23121011.svg?style=flat&logo=github&logoColor=white)](https://github.com/KhamessiTaha)
+[![GitHub](https://img.shields.io/badge/GitHub-%23121011.svg?style=flat&logo=github&logoColor=white)](https://github.com/louai-ellemsi)
 
 ---
 <div align="center">
