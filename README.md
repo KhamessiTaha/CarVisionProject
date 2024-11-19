@@ -74,8 +74,8 @@ flutter run
 ```
 CarVisionProject/
 ├── nodejs/           # Node.js server and API
-├── flutter/        # Flutter application
-└── preprocessing/           # Data preprocessing scripts
+├── flutter/          # Flutter application
+└── preprocessing/    # Data preprocessing scripts
 ```
 
 ## 🧪 Model Performance
