@@ -7,7 +7,7 @@ A graduation project developing an innovative solution for car recognition and i
 [![TensorFlow](https://img.shields.io/badge/TensorFlow-%23FF6F00.svg?style=flat&logo=TensorFlow&logoColor=white)](https://tensorflow.org)
 [![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat&logo=nodedotjs&logoColor=white)](https://nodejs.org)
 
-<img src="https://github.com/KhamessiTaha/CarVisionProject/assets/126385064/07459b02-6dbe-446b-9e2c-31fd9a6b1268" width="400" alt="CarVision Logo">
+<img src="https://github.com/KhamessiTaha/CarVisionProject/assets/126385064/07459b02-6dbe-446b-9e2c-31fd9a6b1268" width="100" alt="CarVision Logo">
 
 ## 🎓 About This Project
 
