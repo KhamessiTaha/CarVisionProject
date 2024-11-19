@@ -16,7 +16,7 @@ CarVision is a graduation project that showcases the power of AI in automotive r
 ### Key Achievements
 - 🎯 **70% Test Accuracy** across 899 car models
 - 📊 **1.45M Training Images** from DVM-CAR 2.0 dataset
-- ⚡ **40% Reduced Training Time** through optimization
+- ⚡ **40% Reduced Training Time** through optimization and Transfer Learning
 - 🚀 **<2s Processing Speed** for real-time results
 
 ## ✨ Features
