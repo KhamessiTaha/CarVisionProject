@@ -63,7 +63,7 @@ flutter pub get
 ```bash
 # Start backend server
 cd nodejs
-npm start
+npm run dev
 
 # Launch Flutter app
 cd flutter
