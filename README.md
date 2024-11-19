@@ -51,11 +51,11 @@ CarVision is a graduation project that showcases the power of AI in automotive r
 flutter doctor
 
 # Install Node.js dependencies
-cd backend
+cd nodejs
 npm install
 
 # Install Flutter dependencies
-cd mobile_app
+cd flutter
 flutter pub get
 ```
 
@@ -66,7 +66,7 @@ cd nodejs
 npm start
 
 # Launch Flutter app
-cd mobile_app
+cd flutter
 flutter run
 ```
 
@@ -75,7 +75,7 @@ flutter run
 CarVisionProject/
 ├── nodejs/           # Node.js server and API
 ├── flutter/        # Flutter application
-└──  preprocessing/           # Data preprocessing scripts
+└── preprocessing/           # Data preprocessing scripts
 ```
 
 ## 🧪 Model Performance
