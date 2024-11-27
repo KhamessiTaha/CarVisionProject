@@ -1,4 +1,4 @@
-# 🚗 CarVisionProject
+# 🚗 CarVisionProject 
 
 A graduation project developing an innovative solution for car recognition and intelligence using artificial intelligence (AI) technology.
 
